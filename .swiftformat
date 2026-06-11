@@ -1,0 +1,6 @@
+# swiftformat configuration for Keepers
+--swiftversion 6.0
+--exclude .build,DerivedData,Keepers.xcodeproj
+--indent 4
+--maxwidth 140
+--commas inline

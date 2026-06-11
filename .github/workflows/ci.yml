@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: extractions/setup-just@v3
+
+      - name: Install Swift tooling
+        run: brew install swiftformat swiftlint xcodegen
+
+      - name: Check bootstrap state
+        id: guard
+        run: |
+          if [ -f project.yml ]; then
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Project not bootstrapped yet (no project.yml) — skipping build/test so the docs-only scaffold stays green. See DESIGN.md milestone M0."
+          fi
+
+      - name: Bootstrap (XcodeGen + SPM resolve)
+        if: steps.guard.outputs.bootstrapped == 'true'
+        run: just bootstrap
+
+      - name: Lint, build, test
+        if: steps.guard.outputs.bootstrapped == 'true'
+        run: just ci

@@ -1,0 +1,33 @@
+# SwiftLint configuration for Keepers
+included:
+  - Sources
+  - Tests
+  - App
+
+excluded:
+  - .build
+  - DerivedData
+
+disabled_rules:
+  - identifier_name # AGENTS.md mandates UPPER_SNAKE_CASE constants
+  - todo
+  - trailing_comma
+
+line_length:
+  warning: 140
+  error: 200
+
+file_length:
+  warning: 800
+  error: 1000
+
+function_body_length:
+  warning: 50
+  error: 80
+
+type_body_length:
+  warning: 400
+  error: 800
+
+nesting:
+  type_level: 3

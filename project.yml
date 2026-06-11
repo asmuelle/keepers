@@ -1,0 +1,53 @@
+# XcodeGen spec for the Keepers app shell. The domain logic lives in the root
+# SPM package (KeepersKit); this project only composes it into an iOS app.
+name: Keepers
+options:
+  bundleIdPrefix: app.keepers
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  KeepersKit:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+
+targets:
+  Keepers:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: KeepersKit
+        product: KeepersUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.keepers.ios
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+
+schemes:
+  Keepers:
+    build:
+      targets:
+        Keepers: all
+    test:
+      gatherCoverageData: false
+      targets:
+        - package: KeepersKit/KeepersCoreTests
+        - package: KeepersKit/IngestKitTests
+        - package: KeepersKit/ScoringKitTests
+        - package: KeepersKit/RankerKitTests
+        - package: KeepersKit/ExportKitTests
+        - package: KeepersKit/PersistenceKitTests
+        - package: KeepersKit/TaggingKitTests
+        - package: KeepersKit/KeepersUITests
+        - package: KeepersKit/InvariantTests
