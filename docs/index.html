@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keepers — AI photo culling on your iPhone. No desktop. No upload.</title>
+<meta name="description" content="Keepers culls thousands of RAW frames in place off your USB-C card on the iPhone itself — scoring, blink checks, burst best-of, and Lightroom XMP export. Photo bytes never leave the device.">
+<meta name="theme-color" content="#0b0b0d">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Keepers — Cull 3,000 shots on your phone. No desktop. No upload.">
+<meta property="og:description" content="On-device AI culling for working photographers. Scan thousands of RAW frames in minutes off a USB-C card. 0 bytes uploaded.">
+<meta property="og:site_name" content="Keepers">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Keepers — On-device AI photo culling for iPhone">
+<meta name="twitter:description" content="Cull a 3,000-shot wedding session on the iPhone itself. No desktop, no upload, 0 bytes leave the device.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  /* palette — near-black charcoal gallery */
+  --bg:#0b0b0d;
+  --bg-raised:#131316;
+  --bg-card:#17171b;
+  --bg-card-hi:#1d1d22;
+  --line:#2a2a31;
+  --line-soft:#202026;
+  --text:#f4f4f6;
+  --text-dim:#b6b6c0;
+  --text-mute:#8a8a95;
+
+  /* accent — warm "selected" amber/gold */
+  --accent:#ffb23e;
+  --accent-deep:#ff9a1f;
+  --accent-soft:rgba(255,178,62,.14);
+  --accent-line:rgba(255,178,62,.42);
+  --reject:#6c6c78;
+  --good:#54d1a0;
+
+  --font-display:"Space Grotesk",system-ui,sans-serif;
+  --font-body:"Inter",system-ui,-apple-system,sans-serif;
+
+  --text-hero:clamp(2.6rem,1.1rem + 6.2vw,6rem);
+  --text-h2:clamp(1.9rem,1.2rem + 2.6vw,3.3rem);
+  --text-stat:clamp(2.6rem,1.4rem + 4.4vw,5rem);
+  --text-base:clamp(1rem,.96rem + .2vw,1.1rem);
+
+  --space-section:clamp(4.5rem,3rem + 6vw,9rem);
+  --radius:16px;
+  --radius-lg:24px;
+  --maxw:1200px;
+
+  --dur:.6s;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:var(--text-base);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+/* atmospheric backdrop — soft amber glow top, grain via gradient */
+body::before{
+  content:"";
+  position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(1100px 600px at 78% -8%, rgba(255,178,62,.10), transparent 60%),
+    radial-gradient(900px 700px at 8% 8%, rgba(90,110,160,.07), transparent 55%),
+    var(--bg);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:3px 3px;
+}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;line-height:1.04;letter-spacing:-.02em;margin:0}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+img,svg{display:block;max-width:100%}
+ul{margin:0;padding:0;list-style:none}
+
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 clamp(1.1rem,4vw,2.2rem)}
+.eyebrow{
+  font-family:var(--font-display);font-size:.72rem;font-weight:600;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--accent);
+  display:inline-flex;align-items:center;gap:.55rem;
+}
+.eyebrow::before{content:"";width:24px;height:1px;background:var(--accent-line)}
+.muted{color:var(--text-dim)}
+.section-head{max-width:62ch}
+.section-head h2{font-size:var(--text-h2);margin:.9rem 0 1rem}
+.section-head p{color:var(--text-dim);font-size:1.08rem}
+
+/* ---------- header / nav ---------- */
+header.site{
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:saturate(140%) blur(14px);
+  background:rgba(11,11,13,.72);
+  border-bottom:1px solid var(--line-soft);
+}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:.6rem;font-family:var(--font-display);font-weight:700;letter-spacing:-.01em;font-size:1.18rem}
+.brand .logo{width:30px;height:30px}
+.nav-links{display:flex;gap:1.7rem;align-items:center}
+.nav-links a{color:var(--text-dim);font-size:.92rem;font-weight:500;transition:color .2s}
+.nav-links a:hover,.nav-links a:focus-visible{color:var(--text)}
+.nav-cta{padding:.5rem 1rem;border-radius:10px;border:1px solid var(--line);color:var(--text)!important;transition:border-color .2s,background .2s}
+.nav-cta:hover,.nav-cta:focus-visible{border-color:var(--accent-line);background:var(--accent-soft)}
+@media(max-width:760px){.nav-links a:not(.nav-cta){display:none}}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:.6rem;font-family:var(--font-display);
+  font-weight:600;font-size:1rem;padding:.85rem 1.45rem;border-radius:12px;
+  cursor:pointer;transition:transform .2s var(--ease),box-shadow .2s,background .2s,border-color .2s;
+  border:1px solid transparent;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:#241500;box-shadow:0 8px 26px -8px rgba(255,154,31,.55)}
+.btn-primary:hover,.btn-primary:focus-visible{transform:translateY(-2px);box-shadow:0 14px 34px -8px rgba(255,154,31,.6)}
+.btn-ghost{border-color:var(--line);color:var(--text)}
+.btn-ghost:hover,.btn-ghost:focus-visible{border-color:var(--accent-line);background:var(--accent-soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* App Store badge (non-functional, styled) */
+.appstore{
+  display:inline-flex;align-items:center;gap:.7rem;padding:.7rem 1.2rem;border-radius:13px;
+  border:1px solid var(--line);background:var(--bg-card);transition:border-color .2s,background .2s,transform .2s;
+}
+.appstore:hover,.appstore:focus-visible{border-color:var(--accent-line);background:var(--bg-card-hi);transform:translateY(-2px)}
+.appstore svg{width:26px;height:26px;flex:none}
+.appstore .small{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute);line-height:1.2}
+.appstore .big{font-family:var(--font-display);font-weight:600;font-size:1.02rem;line-height:1.15}
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:clamp(3rem,5vw,5.5rem) 0 var(--space-section)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(2rem,5vw,4.5rem);align-items:center}
+@media(max-width:920px){.hero-grid{grid-template-columns:1fr}}
+.hero h1{font-size:var(--text-hero);font-weight:700;margin:1.3rem 0 0}
+.hero h1 .hl{color:var(--accent)}
+.hero .sub{font-size:clamp(1.05rem,.96rem + .5vw,1.3rem);color:var(--text-dim);max-width:46ch;margin:1.4rem 0 0}
+.hero-cta{display:flex;flex-wrap:wrap;gap:.9rem;margin-top:2rem;align-items:center}
+.proofpill{
+  display:inline-flex;align-items:center;gap:.6rem;margin-top:1.7rem;padding:.55rem .95rem .55rem .6rem;
+  border:1px solid var(--accent-line);border-radius:999px;background:var(--accent-soft);font-size:.9rem;color:var(--text);
+}
+.proofpill b{font-family:var(--font-display);color:var(--accent)}
+.proofpill .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 4px rgba(84,209,160,.18)}
+
+/* phone visual */
+.phone-wrap{position:relative;justify-self:center}
+.phone{
+  position:relative;width:clamp(248px,30vw,310px);aspect-ratio:9/19.2;
+  border-radius:38px;padding:11px;
+  background:linear-gradient(160deg,#27272e,#0e0e11);
+  border:1px solid #34343d;
+  box-shadow:0 40px 80px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.03) inset;
+}
+.phone-screen{position:relative;width:100%;height:100%;border-radius:28px;overflow:hidden;background:#0c0c0f;border:1px solid #000}
+.phone-notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:90px;height:22px;background:#000;border-radius:999px;z-index:4}
+.phone-svg{width:100%;height:100%}
+.float-chip{
+  position:absolute;display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;border-radius:12px;
+  background:rgba(19,19,22,.92);border:1px solid var(--line);backdrop-filter:blur(6px);
+  font-size:.82rem;font-family:var(--font-display);font-weight:500;box-shadow:0 16px 40px -16px rgba(0,0,0,.8);
+}
+.float-chip .num{color:var(--accent);font-weight:600}
+.float-chip.a{top:8%;right:-6%}
+.float-chip.b{bottom:11%;left:-9%}
+.float-chip .ic{width:16px;height:16px}
+@media(max-width:520px){.float-chip.a{right:-2%}.float-chip.b{left:-2%}}
+
+/* logo strip / trust line */
+.subhero{display:flex;flex-wrap:wrap;gap:1.4rem 2.4rem;margin-top:clamp(2.5rem,4vw,3.5rem);padding-top:1.8rem;border-top:1px solid var(--line-soft)}
+.subhero .item{display:flex;align-items:center;gap:.7rem;color:var(--text-mute);font-size:.9rem;font-family:var(--font-display);font-weight:500}
+.subhero .item svg{width:18px;height:18px;color:var(--accent)}
+
+/* ---------- generic section ---------- */
+section{padding:var(--space-section) 0}
+.section-tight{padding:clamp(3rem,5vw,5rem) 0}
+
+/* ---------- why on-device ---------- */
+.why{position:relative}
+.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.5rem,4vw,3.5rem);align-items:center;margin-top:2.6rem}
+@media(max-width:880px){.why-grid{grid-template-columns:1fr}}
+.scale-card{
+  background:linear-gradient(180deg,var(--bg-card),var(--bg-raised));
+  border:1px solid var(--line);border-radius:var(--radius-lg);padding:clamp(1.5rem,3vw,2.4rem);
+}
+.scale-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--line-soft)}
+.scale-row:last-child{border-bottom:0;padding-bottom:0}
+.scale-row:first-child{padding-top:0}
+.scale-row .k{color:var(--text-dim);font-size:.95rem}
+.scale-row .v{font-family:var(--font-display);font-weight:600;font-size:clamp(1.3rem,1rem + 1.4vw,2rem)}
+.scale-row .v.bad{color:var(--reject)}
+.scale-row .v.good{color:var(--accent)}
+.barwrap{margin-top:1.6rem}
+.bar{height:12px;border-radius:999px;background:#0d0d10;border:1px solid var(--line-soft);overflow:hidden;position:relative}
+.bar > span{position:absolute;inset:0;display:block;border-radius:999px}
+.bar.cloud > span{width:2%;background:var(--reject)}
+.bar.device > span{width:100%;background:linear-gradient(90deg,var(--accent-deep),var(--accent))}
+.barlabel{display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-mute);margin:.55rem 0 1.3rem;font-family:var(--font-display)}
+.why-points{display:grid;gap:1.1rem;margin-top:1.8rem}
+.why-point{display:flex;gap:.9rem;align-items:flex-start}
+.why-point .badge{flex:none;width:36px;height:36px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center;color:var(--accent)}
+.why-point .badge svg{width:18px;height:18px}
+.why-point h3{font-size:1.08rem;margin-bottom:.2rem}
+.why-point p{color:var(--text-dim);font-size:.96rem}
+
+/* ---------- features bento ---------- */
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(.9rem,1.6vw,1.3rem);margin-top:3rem}
+.cell{
+  background:linear-gradient(180deg,var(--bg-card),var(--bg-raised));
+  border:1px solid var(--line);border-radius:var(--radius-lg);padding:clamp(1.4rem,2.4vw,2rem);
+  position:relative;overflow:hidden;transition:border-color .25s,transform .25s var(--ease);
+}
+.cell:hover{border-color:var(--accent-line);transform:translateY(-3px)}
+.cell h3{font-size:1.3rem;margin:1.1rem 0 .5rem}
+.cell p{color:var(--text-dim);font-size:.97rem}
+.cell .ftag{font-family:var(--font-display);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.cell-lg{grid-column:span 4}
+.cell-sm{grid-column:span 2}
+.cell-half{grid-column:span 3}
+@media(max-width:900px){.cell-lg,.cell-half{grid-column:span 6}.cell-sm{grid-column:span 3}}
+@media(max-width:560px){.cell-sm{grid-column:span 6}}
+.cell-visual{margin-top:1.4rem;border-radius:14px;overflow:hidden;border:1px solid var(--line-soft);background:#0c0c0f}
+.cell-visual svg{width:100%;display:block}
+
+/* meter row inside taste cell */
+.meter{display:flex;align-items:center;gap:.8rem;margin-top:.7rem}
+.meter .lbl{font-size:.82rem;color:var(--text-mute);width:88px;flex:none;font-family:var(--font-display)}
+.meter .track{flex:1;height:7px;border-radius:999px;background:#0d0d10;border:1px solid var(--line-soft);overflow:hidden}
+.meter .track > span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent-deep),var(--accent))}
+.meter .pct{font-family:var(--font-display);font-size:.82rem;color:var(--accent);width:38px;text-align:right}
+
+/* ---------- how it works ---------- */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:3rem;counter-reset:step}
+@media(max-width:900px){.steps{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.steps{grid-template-columns:1fr}}
+.step{
+  position:relative;padding:1.6rem 1.4rem;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--bg-card);transition:border-color .25s,transform .25s var(--ease);
+}
+.step:hover{border-color:var(--accent-line);transform:translateY(-3px)}
+.step .n{
+  counter-increment:step;font-family:var(--font-display);font-weight:700;font-size:1.05rem;
+  width:40px;height:40px;border-radius:11px;display:grid;place-items:center;
+  background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent);margin-bottom:1rem;
+}
+.step .n::before{content:counter(step,decimal-leading-zero)}
+.step h3{font-size:1.12rem;margin-bottom:.4rem}
+.step p{color:var(--text-dim);font-size:.93rem}
+.step .ico{position:absolute;top:1.5rem;right:1.3rem;width:22px;height:22px;color:var(--text-mute)}
+
+/* ---------- stats strip ---------- */
+.stats{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);background:linear-gradient(180deg,rgba(255,178,62,.04),transparent)}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(1rem,3vw,2rem);text-align:center}
+@media(max-width:780px){.stat-grid{grid-template-columns:1fr 1fr;gap:2.4rem 1rem}}
+.stat .num{font-family:var(--font-display);font-weight:700;font-size:var(--text-stat);color:var(--text);line-height:1;letter-spacing:-.03em}
+.stat .num .u{color:var(--accent);font-size:.5em;vertical-align:baseline}
+.stat .lbl{color:var(--text-dim);font-size:.92rem;margin-top:.7rem}
+
+/* ---------- pricing ---------- */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(1rem,2vw,1.5rem);margin-top:3rem;align-items:stretch}
+@media(max-width:880px){.price-grid{grid-template-columns:1fr;max-width:440px;margin-inline:auto}}
+.price{
+  display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:clamp(1.6rem,2.6vw,2.2rem);background:var(--bg-card);position:relative;transition:border-color .25s,transform .25s var(--ease)
+}
+.price:hover{transform:translateY(-3px)}
+.price.feature{border-color:var(--accent-line);background:linear-gradient(180deg,rgba(255,178,62,.07),var(--bg-card));box-shadow:0 30px 70px -40px rgba(255,154,31,.6)}
+.price .tag{position:absolute;top:-12px;right:18px;font-family:var(--font-display);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:#241500;background:var(--accent);padding:.3rem .7rem;border-radius:999px;font-weight:600}
+.price .plan{font-family:var(--font-display);font-weight:600;font-size:1.25rem}
+.price .desc{color:var(--text-mute);font-size:.9rem;margin-top:.3rem;min-height:2.5em}
+.price .amount{font-family:var(--font-display);font-weight:700;font-size:2.6rem;margin:1.1rem 0 .1rem;line-height:1}
+.price .amount .per{font-size:.9rem;color:var(--text-mute);font-weight:500}
+.price .alt{font-size:.85rem;color:var(--text-dim);min-height:1.4em}
+.price ul{display:grid;gap:.7rem;margin:1.5rem 0;flex:1}
+.price li{display:flex;gap:.6rem;align-items:flex-start;font-size:.93rem;color:var(--text-dim)}
+.price li svg{width:17px;height:17px;flex:none;color:var(--accent);margin-top:.15rem}
+.price .btn{width:100%;justify-content:center}
+
+/* ---------- FAQ ---------- */
+.faq{display:grid;gap:.8rem;margin-top:2.6rem;max-width:780px}
+details{border:1px solid var(--line);border-radius:14px;background:var(--bg-card);overflow:hidden;transition:border-color .2s}
+details[open]{border-color:var(--accent-line)}
+summary{
+  list-style:none;cursor:pointer;padding:1.15rem 1.4rem;font-family:var(--font-display);font-weight:500;font-size:1.05rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:color .2s;
+}
+summary::-webkit-details-marker{display:none}
+summary:hover{color:var(--accent)}
+summary .plus{flex:none;width:22px;height:22px;position:relative;transition:transform .3s var(--ease)}
+summary .plus::before,summary .plus::after{content:"";position:absolute;background:var(--accent);border-radius:2px}
+summary .plus::before{top:50%;left:2px;right:2px;height:2px;transform:translateY(-50%)}
+summary .plus::after{left:50%;top:2px;bottom:2px;width:2px;transform:translateX(-50%);transition:opacity .3s}
+details[open] summary .plus{transform:rotate(90deg)}
+details[open] summary .plus::after{opacity:0}
+.faq-a{padding:0 1.4rem 1.25rem;color:var(--text-dim);font-size:.98rem}
+
+/* ---------- final CTA ---------- */
+.final{
+  text-align:center;border:1px solid var(--accent-line);border-radius:var(--radius-lg);
+  padding:clamp(2.6rem,5vw,4.5rem) clamp(1.2rem,4vw,3rem);
+  background:radial-gradient(700px 320px at 50% -20%,rgba(255,178,62,.16),transparent 70%),var(--bg-card);
+  position:relative;overflow:hidden;
+}
+.final h2{font-size:var(--text-h2)}
+.final p{color:var(--text-dim);max-width:50ch;margin:1rem auto 2rem;font-size:1.1rem}
+.final .hero-cta{justify-content:center}
+
+/* ---------- footer ---------- */
+footer.site{border-top:1px solid var(--line-soft);padding:3rem 0 2.5rem;color:var(--text-mute)}
+.foot-grid{display:flex;flex-wrap:wrap;gap:2rem;justify-content:space-between;align-items:flex-start}
+.foot-brand{max-width:30ch}
+.foot-brand p{color:var(--text-mute);font-size:.9rem;margin-top:.7rem}
+.foot-cols{display:flex;gap:3.5rem;flex-wrap:wrap}
+.foot-col h4{font-family:var(--font-display);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.9rem}
+.foot-col a{display:block;color:var(--text-mute);font-size:.92rem;padding:.25rem 0;transition:color .2s}
+.foot-col a:hover,.foot-col a:focus-visible{color:var(--accent)}
+.foot-bottom{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;margin-top:2.6rem;padding-top:1.6rem;border-top:1px solid var(--line-soft);font-size:.84rem}
+
+/* ---------- scroll reveal ---------- */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;scroll-behavior:auto!important}
+  .reveal{opacity:1;transform:none;transition:none}
+  .btn:hover,.cell:hover,.step:hover,.price:hover,.appstore:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="Keepers home">
+      <svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="29" height="29" rx="8" stroke="#34343d" stroke-width="1.5"/>
+        <path d="M10 21l4.6-6 3.2 3.8L21 14l4 7H10z" fill="#ffb23e"/>
+        <circle cx="11.5" cy="11" r="2.4" fill="#ffb23e"/>
+      </svg>
+      Keepers
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#why">Why on-device</a>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a class="nav-cta" href="#get">Get Keepers</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow reveal">On-device AI culling · iPhone</span>
+        <h1 id="hero-heading" class="reveal">Cull <span class="hl">3,000 shots</span> on your phone.<br>No desktop. No upload.</h1>
+        <p class="sub reveal">Keepers scores, blink-checks, groups bursts and shortlists an entire wedding or portrait session — running on the iPhone itself, straight off your USB-C card.</p>
+        <div class="proofpill reveal"><span class="dot" aria-hidden="true"></span>Photo bytes never leave the device — <b>0&nbsp;bytes uploaded</b></div>
+        <div class="hero-cta reveal">
+          <a class="appstore" href="#" aria-label="Coming to the App Store (not yet available)">
+            <svg viewBox="0 0 24 24" fill="#f4f4f6" aria-hidden="true"><path d="M16.5 1.8c.1 1-.3 2-.9 2.7-.6.8-1.7 1.4-2.7 1.3-.1-1 .4-2 1-2.7.6-.8 1.7-1.3 2.6-1.3zM20 17c-.5 1.2-.8 1.7-1.4 2.7-.9 1.4-2.2 3.1-3.7 3.1-1.4 0-1.7-.9-3.6-.9s-2.3.9-3.6.9c-1.5 0-2.7-1.6-3.6-2.9C1.2 16.6.9 12 2.5 9.6c1-1.6 2.7-2.5 4.3-2.5 1.6 0 2.6 1 3.9 1 1.3 0 2-1 3.9-1 1.4 0 2.9.8 3.9 2.1-3.4 1.9-2.9 6.8 1.6 7.8z"/></svg>
+            <span><span class="small">Coming to the</span><br><span class="big">App Store</span></span>
+          </a>
+          <a class="btn btn-ghost" href="#how">See how it works</a>
+        </div>
+      </div>
+
+      <div class="phone-wrap reveal">
+        <div class="float-chip a"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#54d1a0" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span><span class="num">2,418</span> keepers</span></div>
+        <div class="float-chip b"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#ffb23e" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><span>Scanned in <span class="num">7&nbsp;min</span></span></div>
+        <div class="phone">
+          <div class="phone-notch" aria-hidden="true"></div>
+          <div class="phone-screen">
+            <svg class="phone-svg" viewBox="0 0 280 580" role="img" aria-label="Keepers culling grid showing photo frames with sharpness and aesthetic score badges; the highlighted frame is the selected keeper.">
+              <defs>
+                <linearGradient id="fr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#23232a"/><stop offset="1" stop-color="#15151a"/></linearGradient>
+                <linearGradient id="frSel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a2c12"/><stop offset="1" stop-color="#241a0c"/></linearGradient>
+              </defs>
+              <rect width="280" height="580" fill="#0c0c0f"/>
+              <!-- top bar -->
+              <text x="20" y="58" fill="#f4f4f6" font-family="Space Grotesk,sans-serif" font-size="18" font-weight="600">Session · Reception</text>
+              <text x="20" y="80" fill="#8a8a95" font-family="Inter,sans-serif" font-size="11">3,000 RAW · culling in place</text>
+              <rect x="20" y="92" width="240" height="6" rx="3" fill="#1d1d22"/>
+              <rect x="20" y="92" width="186" height="6" rx="3" fill="#ffb23e"/>
+              <!-- grid of frames -->
+              <g font-family="Space Grotesk,sans-serif" font-size="10" font-weight="600">
+                <!-- row 1 -->
+                <g>
+                  <rect x="20" y="116" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="38" cy="135" r="9" fill="#15151a" stroke="#54d1a0"/><text x="38" y="139" text-anchor="middle" fill="#54d1a0">92</text>
+                  <rect x="103" y="116" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="121" cy="135" r="9" fill="#15151a" stroke="#6c6c78"/><text x="121" y="139" text-anchor="middle" fill="#9a9aa4">41</text>
+                  <line x1="113" y1="170" x2="167" y2="170" stroke="#6c6c78" stroke-width="1.4" stroke-dasharray="3 3"/>
+                  <rect x="186" y="116" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="204" cy="135" r="9" fill="#15151a" stroke="#54d1a0"/><text x="204" y="139" text-anchor="middle" fill="#54d1a0">88</text>
+                </g>
+                <!-- row 2 — selected keeper -->
+                <g>
+                  <rect x="18.5" y="218.5" width="76" height="95" rx="9" fill="url(#frSel)" stroke="#ffb23e" stroke-width="2.2"/>
+                  <rect x="24" y="224" width="40" height="13" rx="6" fill="#ffb23e"/><text x="44" y="234" text-anchor="middle" fill="#241500" font-size="8.5">KEEPER</text>
+                  <circle cx="78" cy="245" r="9" fill="#241a0c" stroke="#ffb23e"/><text x="78" y="249" text-anchor="middle" fill="#ffb23e">97</text>
+                  <rect x="103" y="220" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="121" cy="239" r="9" fill="#15151a" stroke="#6c6c78"/><text x="121" y="243" text-anchor="middle" fill="#9a9aa4">55</text>
+                  <rect x="186" y="220" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="204" cy="239" r="9" fill="#15151a" stroke="#54d1a0"/><text x="204" y="243" text-anchor="middle" fill="#54d1a0">84</text>
+                </g>
+                <!-- row 3 -->
+                <g>
+                  <rect x="20" y="324" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="38" cy="343" r="9" fill="#15151a" stroke="#54d1a0"/><text x="38" y="347" text-anchor="middle" fill="#54d1a0">79</text>
+                  <rect x="103" y="324" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="121" cy="343" r="9" fill="#15151a" stroke="#6c6c78"/><text x="121" y="347" text-anchor="middle" fill="#9a9aa4">33</text>
+                  <!-- blink indicator -->
+                  <text x="155" y="347" fill="#ff7a7a" font-size="8" font-family="Inter,sans-serif">blink</text>
+                  <rect x="186" y="324" width="73" height="92" rx="8" fill="url(#fr)" stroke="#2a2a31"/>
+                  <circle cx="204" cy="343" r="9" fill="#15151a" stroke="#54d1a0"/><text x="204" y="347" text-anchor="middle" fill="#54d1a0">90</text>
+                </g>
+              </g>
+              <!-- bottom action bar -->
+              <rect x="20" y="438" width="240" height="54" rx="14" fill="#15151a" stroke="#2a2a31"/>
+              <circle cx="48" cy="465" r="13" fill="#241a0c" stroke="#ffb23e"/>
+              <path d="M42 465l4 4 8-8" stroke="#ffb23e" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="72" y="461" fill="#f4f4f6" font-family="Space Grotesk,sans-serif" font-size="13" font-weight="600">Export shortlist</text>
+              <text x="72" y="478" fill="#8a8a95" font-family="Inter,sans-serif" font-size="10">XMP → Lightroom Classic</text>
+              <rect x="206" y="450" width="40" height="30" rx="8" fill="#ffb23e"/>
+              <text x="226" y="470" text-anchor="middle" fill="#241500" font-family="Space Grotesk,sans-serif" font-size="13" font-weight="700">→</text>
+              <!-- thermal / engine status -->
+              <text x="20" y="528" fill="#8a8a95" font-family="Inter,sans-serif" font-size="10">Neural Engine · thermal-aware batch</text>
+              <rect x="20" y="538" width="240" height="5" rx="2.5" fill="#1d1d22"/>
+              <rect x="20" y="538" width="240" height="5" rx="2.5" fill="#54d1a0" opacity="0.5"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="subhero reveal">
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>RAW from major cameras</span>
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6L12 16.8 6.5 19.2l1-6L3 8.9 9 8z"/></svg>Apple Vision · Neural Engine</span>
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>No subscription-to-a-server</span>
+        <span class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Contract-safe · nothing leaves</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY ON-DEVICE -->
+  <section class="why" id="why" aria-labelledby="why-heading">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">The physics of the problem</span>
+        <h2 id="why-heading">A 3,000-shot RAW session can't round-trip the cloud.</h2>
+        <p>That session weighs <strong style="color:var(--text)">60–150&nbsp;GB</strong>. Uploading it from a phone is not slow — it's impossible in any reasonable time, on any reasonable plan. So Keepers doesn't try. It culls in place off your card, using the embedded JPEG previews and Apple's Vision framework on the Neural Engine.</p>
+      </div>
+
+      <div class="why-grid">
+        <div class="scale-card reveal">
+          <div class="scale-row"><span class="k">RAW session size</span><span class="v">60–150 GB</span></div>
+          <div class="scale-row"><span class="k">Upload &amp; download via cloud</span><span class="v bad">Hours → days</span></div>
+          <div class="scale-row"><span class="k">Cull in place with Keepers</span><span class="v good">Minutes</span></div>
+
+          <div class="barwrap">
+            <div class="barlabel"><span>Cloud culling — data that leaves your device</span><span>~150 GB</span></div>
+            <div class="bar cloud"><span></span></div>
+          </div>
+          <div class="barwrap" style="margin-top:.2rem">
+            <div class="barlabel"><span>Keepers — data that leaves your device</span><span style="color:var(--accent)">0 bytes</span></div>
+            <div class="bar device"><span></span></div>
+          </div>
+        </div>
+
+        <div class="why-points">
+          <div class="why-point reveal">
+            <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>
+            <div><h3>Client contracts forbid uploading</h3><p>Wedding and portrait agreements routinely ban storing images on third-party servers. On-device culling keeps you compliant by default — there's no server to leak.</p></div>
+          </div>
+          <div class="why-point reveal">
+            <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
+            <div><h3>No GPU bills, no server subscription</h3><p>Competitors pay for cloud compute and pass it on. Keepers runs entirely on the silicon you already carry, so there's no metered server cost baked into the price.</p></div>
+          </div>
+          <div class="why-point reveal">
+            <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span>
+            <div><h3>Reads embedded JPEG previews</h3><p>Every RAW file ships a full-res JPEG preview. Keepers scores those on the Neural Engine — fast enough to scan thousands of frames without decoding every RAW.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES BENTO -->
+  <section id="features" aria-labelledby="features-heading">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">What it actually does</span>
+        <h2 id="features-heading">A culling engine, not a filter pack.</h2>
+        <p>Five jobs, all on the iPhone: score every frame, kill the duplicates, surface the keepers, learn your taste, and hand stars straight back to your editor.</p>
+      </div>
+
+      <div class="bento">
+        <article class="cell cell-lg reveal">
+          <span class="ftag">Scoring</span>
+          <h3>Sharpness, blink &amp; aesthetic, frame by frame</h3>
+          <p>Each shot gets a composite score from real signals — focus sharpness, eye-open / blink detection, face capture quality, and an aesthetic model. Thermal-aware batching scans thousands of RAW frames in minutes without cooking your phone.</p>
+          <div class="cell-visual" aria-hidden="true">
+            <svg viewBox="0 0 560 180">
+              <rect width="560" height="180" fill="#0c0c0f"/>
+              <g font-family="Space Grotesk,sans-serif" font-size="11" font-weight="600">
+                <!-- sharpness meter -->
+                <text x="24" y="36" fill="#b6b6c0" font-family="Inter,sans-serif" font-size="11">Sharpness</text>
+                <rect x="24" y="44" width="220" height="9" rx="4.5" fill="#16161b" stroke="#2a2a31"/><rect x="24" y="44" width="200" height="9" rx="4.5" fill="#ffb23e"/>
+                <text x="252" y="53" fill="#ffb23e">94</text>
+                <text x="24" y="80" fill="#b6b6c0" font-family="Inter,sans-serif" font-size="11">Eyes open</text>
+                <rect x="24" y="88" width="220" height="9" rx="4.5" fill="#16161b" stroke="#2a2a31"/><rect x="24" y="88" width="214" height="9" rx="4.5" fill="#54d1a0"/>
+                <text x="252" y="97" fill="#54d1a0">Yes</text>
+                <text x="24" y="124" fill="#b6b6c0" font-family="Inter,sans-serif" font-size="11">Aesthetic</text>
+                <rect x="24" y="132" width="220" height="9" rx="4.5" fill="#16161b" stroke="#2a2a31"/><rect x="24" y="132" width="178" height="9" rx="4.5" fill="#ffb23e"/>
+                <text x="252" y="141" fill="#ffb23e">88</text>
+                <!-- composite ring -->
+                <circle cx="430" cy="90" r="52" fill="none" stroke="#1d1d22" stroke-width="11"/>
+                <circle cx="430" cy="90" r="52" fill="none" stroke="#ffb23e" stroke-width="11" stroke-linecap="round" stroke-dasharray="294 327" transform="rotate(-90 430 90)"/>
+                <text x="430" y="86" text-anchor="middle" fill="#f4f4f6" font-size="30" font-weight="700">90</text>
+                <text x="430" y="106" text-anchor="middle" fill="#8a8a95" font-family="Inter,sans-serif" font-size="10">composite</text>
+              </g>
+            </svg>
+          </div>
+        </article>
+
+        <article class="cell cell-sm reveal">
+          <span class="ftag">Bursts &amp; dupes</span>
+          <h3>Best-of, picked for you</h3>
+          <p>Near-duplicate grouping collapses a 12-frame burst to the single sharpest, best-expression keeper.</p>
+          <div class="cell-visual" aria-hidden="true">
+            <svg viewBox="0 0 260 150">
+              <rect width="260" height="150" fill="#0c0c0f"/>
+              <rect x="40" y="46" width="92" height="68" rx="8" fill="#15151a" stroke="#2a2a31" transform="rotate(-7 86 80)"/>
+              <rect x="52" y="40" width="92" height="68" rx="8" fill="#1a1a20" stroke="#2a2a31" transform="rotate(-3 98 74)"/>
+              <rect x="66" y="36" width="96" height="72" rx="9" fill="#241a0c" stroke="#ffb23e" stroke-width="2.2"/>
+              <path d="M88 72l8 8 16-16" stroke="#ffb23e" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="180" y="70" fill="#f4f4f6" font-family="Space Grotesk,sans-serif" font-size="13" font-weight="600">1 of 12</text>
+              <text x="180" y="88" fill="#8a8a95" font-family="Inter,sans-serif" font-size="10">burst collapsed</text>
+            </svg>
+          </div>
+        </article>
+
+        <article class="cell cell-half reveal">
+          <span class="ftag">Taste model</span>
+          <h3>It learns the way <em>you</em> pick</h3>
+          <p>Every accept and reject trains a personalization model on-device. Over a few sessions, the shortlist starts to look like the selects you'd have made by hand — your eye, scaled.</p>
+          <div class="meter"><span class="lbl">Warm tones</span><span class="track"><span style="width:84%"></span></span><span class="pct">84</span></div>
+          <div class="meter"><span class="lbl">Tight crops</span><span class="track"><span style="width:67%"></span></span><span class="pct">67</span></div>
+          <div class="meter"><span class="lbl">Candid moments</span><span class="track"><span style="width:91%"></span></span><span class="pct">91</span></div>
+        </article>
+
+        <article class="cell cell-half reveal">
+          <span class="ftag">Lightroom &amp; Capture One</span>
+          <h3>Lossless XMP round-trip</h3>
+          <p>Stars, picks and color labels export as sidecar XMP straight back into Lightroom Classic or Capture One. Nothing is baked, nothing is destroyed — you finish exactly where you already edit.</p>
+          <div class="cell-visual" aria-hidden="true">
+            <svg viewBox="0 0 560 130">
+              <rect width="560" height="130" fill="#0c0c0f"/>
+              <g font-family="Space Grotesk,sans-serif" font-weight="600" font-size="12">
+                <rect x="26" y="40" width="150" height="50" rx="10" fill="#15151a" stroke="#2a2a31"/>
+                <text x="101" y="64" text-anchor="middle" fill="#f4f4f6">Keepers</text>
+                <text x="101" y="80" text-anchor="middle" fill="#8a8a95" font-family="Inter,sans-serif" font-size="10">★★★★★ + picks</text>
+                <!-- arrow with XMP tag -->
+                <line x1="186" y1="65" x2="372" y2="65" stroke="#ffb23e" stroke-width="2" stroke-dasharray="6 5"/>
+                <polygon points="372,59 384,65 372,71" fill="#ffb23e"/>
+                <rect x="246" y="40" width="64" height="22" rx="6" fill="#241a0c" stroke="#ffb23e"/>
+                <text x="278" y="55" text-anchor="middle" fill="#ffb23e" font-size="10">.xmp</text>
+                <rect x="384" y="40" width="150" height="50" rx="10" fill="#15151a" stroke="#2a2a31"/>
+                <text x="459" y="64" text-anchor="middle" fill="#f4f4f6">Lightroom</text>
+                <text x="459" y="80" text-anchor="middle" fill="#8a8a95" font-family="Inter,sans-serif" font-size="10">stars intact</text>
+              </g>
+            </svg>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section-tight" id="how" aria-labelledby="how-heading">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Four steps, one device</span>
+        <h2 id="how-heading">From card reader to Lightroom — without a laptop.</h2>
+      </div>
+      <div class="steps">
+        <article class="step reveal">
+          <span class="n" aria-hidden="true"></span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M9 6h.01M12 6h.01M15 6h.01"/></svg>
+          <h3>Plug in the card</h3>
+          <p>Connect your USB-C card reader or SSD straight to the iPhone. Keepers reads RAW frames in place — no import, no copy.</p>
+        </article>
+        <article class="step reveal">
+          <span class="n" aria-hidden="true"></span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <h3>Scan in minutes</h3>
+          <p>Thermal-aware batch scoring runs thousands of frames on the Neural Engine — sharpness, blinks, faces and aesthetics, fast.</p>
+        </article>
+        <article class="step reveal">
+          <span class="n" aria-hidden="true"></span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h12M3 18h6"/></svg>
+          <h3>Get the shortlist</h3>
+          <p>Bursts collapse, duplicates merge, keepers rise to the top. Review the shortlist and adjust — it learns from every call.</p>
+        </article>
+        <article class="step reveal">
+          <span class="n" aria-hidden="true"></span>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          <h3>Export to Lightroom</h3>
+          <p>Stars and labels write out as lossless XMP. Open Lightroom Classic or Capture One and your selects are already there.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS STRIP -->
+  <section class="stats section-tight" aria-labelledby="stats-heading">
+    <h2 id="stats-heading" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">By the numbers</h2>
+    <div class="wrap">
+      <div class="stat-grid">
+        <div class="stat reveal"><div class="num">3,000<span class="u">+</span></div><div class="lbl">frames per session, culled on-device</div></div>
+        <div class="stat reveal"><div class="num">0<span class="u"> B</span></div><div class="lbl">bytes uploaded — nothing leaves the device</div></div>
+        <div class="stat reveal"><div class="num">60–150<span class="u"> GB</span></div><div class="lbl">RAW that never has to round-trip the cloud</div></div>
+        <div class="stat reveal"><div class="num">min<span class="u">s</span></div><div class="lbl">not hours — scan times that fit a coffee break</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" aria-labelledby="pricing-heading">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Pricing</span>
+        <h2 id="pricing-heading">Pay once on-device. No metered server bill.</h2>
+        <p>Photographers already pay $120–540/yr for desktop AI culling. Keepers is mobile-native and on-device — so it can be priced like a tool you own, not a server you rent.</p>
+      </div>
+
+      <div class="price-grid" id="get">
+        <article class="price reveal">
+          <span class="plan">Free</span>
+          <p class="desc">Try the engine on a real session before you commit.</p>
+          <div class="amount">$0</div>
+          <p class="alt">No card required</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Scan &amp; score a sample set</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Sharpness &amp; blink detection</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>100% on-device, 0 uploads</li>
+          </ul>
+          <a class="btn btn-ghost" href="#">Start free</a>
+        </article>
+
+        <article class="price feature reveal">
+          <span class="tag">Most popular</span>
+          <span class="plan">Pro</span>
+          <p class="desc">The full culling engine for working photographers.</p>
+          <div class="amount">$49.99<span class="per"> /yr</span></div>
+          <p class="alt">or $6.99/mo · billed via App Store</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Unlimited sessions &amp; frames</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Burst best-of + duplicate grouping</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Personalized taste model</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Lossless XMP → Lightroom / Capture One</li>
+          </ul>
+          <a class="btn btn-primary" href="#">Go Pro</a>
+        </article>
+
+        <article class="price reveal">
+          <span class="plan">Lifetime</span>
+          <p class="desc">One payment. Yours for good, no renewals.</p>
+          <div class="amount">$89.99<span class="per"> once</span></div>
+          <p class="alt">Best value over two years</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Everything in Pro, forever</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>All future culling updates</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>No subscription, ever</li>
+          </ul>
+          <a class="btn btn-ghost" href="#">Buy lifetime</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section-tight" aria-labelledby="faq-heading">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Questions</span>
+        <h2 id="faq-heading">The things photographers ask first.</h2>
+      </div>
+      <div class="faq">
+        <details class="reveal" open>
+          <summary>Do my photos ever upload anywhere?<span class="plus" aria-hidden="true"></span></summary>
+          <p class="faq-a">Never. Keepers runs entirely on the iPhone using Apple's Vision framework on the Neural Engine. Your photo bytes stay on your card and your device — 0 bytes are uploaded. There is no Keepers server holding your images, which is exactly why it works within client contracts that forbid uploading wedding or portrait files.</p>
+        </details>
+        <details class="reveal">
+          <summary>Which formats and cameras are supported?<span class="plus" aria-hidden="true"></span></summary>
+          <p class="faq-a">RAW from the major camera makers (Canon, Sony, Nikon, Fujifilm and more) plus JPEG. Keepers reads the full-res JPEG preview embedded in each RAW for fast scoring, so it scans thousands of frames without decoding every file.</p>
+        </details>
+        <details class="reveal">
+          <summary>How does it cull a 60–150 GB session on a phone?<span class="plus" aria-hidden="true"></span></summary>
+          <p class="faq-a">It doesn't move the session — it reads it in place off your USB-C card or SSD. Scoring runs on the embedded previews via the Neural Engine, with thermal-aware batching so a 3,000-frame session finishes in minutes without overheating the phone.</p>
+        </details>
+        <details class="reveal">
+          <summary>Will my edits transfer to Lightroom?<span class="plus" aria-hidden="true"></span></summary>
+          <p class="faq-a">Yes. Stars, picks and color labels export as standard sidecar XMP, lossless and non-destructive. Import the folder into Lightroom Classic or Capture One and your selects and ratings are already applied.</p>
+        </details>
+        <details class="reveal">
+          <summary>How is this different from Aftershoot and other AI cullers?<span class="plus" aria-hidden="true"></span></summary>
+          <p class="faq-a">Those tools proved photographers will pay for AI culling — but they're desktop-only and lean on the cloud. Keepers is mobile-native and fully on-device: cull straight from the card on your phone, between the ceremony and the reception, with nothing uploaded and no server subscription.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="section-tight" aria-labelledby="cta-heading">
+    <div class="wrap">
+      <div class="final reveal">
+        <span class="eyebrow" style="justify-content:center">Coming soon</span>
+        <h2 id="cta-heading" style="margin-top:.9rem">Cull the session before you leave the venue.</h2>
+        <p>On-device AI culling for working photographers. No desktop, no upload, no server bill — just your iPhone, your card, and a finished shortlist.</p>
+        <div class="hero-cta">
+          <a class="appstore" href="#" aria-label="Coming to the App Store (not yet available)">
+            <svg viewBox="0 0 24 24" fill="#f4f4f6" aria-hidden="true"><path d="M16.5 1.8c.1 1-.3 2-.9 2.7-.6.8-1.7 1.4-2.7 1.3-.1-1 .4-2 1-2.7.6-.8 1.7-1.3 2.6-1.3zM20 17c-.5 1.2-.8 1.7-1.4 2.7-.9 1.4-2.2 3.1-3.7 3.1-1.4 0-1.7-.9-3.6-.9s-2.3.9-3.6.9c-1.5 0-2.7-1.6-3.6-2.9C1.2 16.6.9 12 2.5 9.6c1-1.6 2.7-2.5 4.3-2.5 1.6 0 2.6 1 3.9 1 1.3 0 2-1 3.9-1 1.4 0 2.9.8 3.9 2.1-3.4 1.9-2.9 6.8 1.6 7.8z"/></svg>
+            <span><span class="small">Coming to the</span><br><span class="big">App Store</span></span>
+          </a>
+          <a class="btn btn-ghost" href="#pricing">See pricing</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top" aria-label="Keepers home">
+          <svg class="logo" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="1.5" y="1.5" width="29" height="29" rx="8" stroke="#34343d" stroke-width="1.5"/>
+            <path d="M10 21l4.6-6 3.2 3.8L21 14l4 7H10z" fill="#ffb23e"/>
+            <circle cx="11.5" cy="11" r="2.4" fill="#ffb23e"/>
+          </svg>
+          Keepers
+        </a>
+        <p>On-device AI photo culling for working photographers. Cull thousands of RAW frames on the iPhone — no desktop, no upload.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col">
+          <h4>Product</h4>
+          <a href="#why">Why on-device</a>
+          <a href="#features">Features</a>
+          <a href="#how">How it works</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div class="foot-col">
+          <h4>Support</h4>
+          <a href="#faq-heading">FAQ</a>
+          <a href="#">Privacy</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="foot-col">
+          <h4>Workflow</h4>
+          <a href="#">RAW formats</a>
+          <a href="#">Lightroom XMP</a>
+          <a href="#">Capture One</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Keepers. Cull 3,000 shots on your phone.</span>
+      <span>Photo bytes never leave your device.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var els = document.querySelectorAll('.reveal');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce || !('IntersectionObserver' in window)){
+    els.forEach(function(el){el.classList.add('in')});
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  },{rootMargin:'0px 0px -8% 0px',threshold:0.08});
+  els.forEach(function(el){io.observe(el)});
+})();
+</script>
+</body>
+</html>
