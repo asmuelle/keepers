@@ -2,19 +2,7 @@
 
 > AI photo culling that scores, blink-checks, groups, and shortlists a 3,000-shot session on the phone itself — Aftershoot power without the desktop or the $30/month.
 
-**Category:** Edge AI / on-device inference (iOS + Android) · **Status:** ✅ Recommended (Top 5 of the edge-AI run)
-
-## Scorecard
-
-| Metric | Score |
-|---|---|
-| Rank (of 9 finalists) | #4 |
-| Combined score | 5.6 |
-| Monetization potential (1-10) | 7 |
-| Feasibility (1-10) | 6 |
-| Edge AI structurally essential | Yes |
-| Skeptic verdict | weakened |
-
+**Category:** Edge AI / on-device inference (iOS + Android) 
 ## Concept
 
 AI photo culling that scores, blink-checks, groups, and shortlists a 3,000-shot session on the phone itself — Aftershoot power without the desktop or the $30/month.
