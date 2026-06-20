@@ -65,5 +65,9 @@ format:
 	@command -v swiftformat >/dev/null 2>&1 || { echo "error: swiftformat not installed — run 'brew install swiftformat'"; exit 1; }
 	swiftformat .
 
+# verify formatting (swiftformat --lint); CI gate
+format-check:
+	swiftformat --lint .
+
 # Full gate: lint + build + test (what GitHub Actions runs)
-ci: lint build test
+ci: lint build test format-check
