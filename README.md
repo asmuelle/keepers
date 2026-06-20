@@ -1,5 +1,7 @@
 # Keepers
 
+[![CI](https://github.com/asmuelle/keepers/actions/workflows/ci.yml/badge.svg)](https://github.com/asmuelle/keepers/actions/workflows/ci.yml)
+
 > AI photo culling that scores, blink-checks, groups, and shortlists a 3,000-shot session on the phone itself — Aftershoot power without the desktop or the $30/month.
 
 **Category:** Edge AI / on-device inference (iOS + Android) 
